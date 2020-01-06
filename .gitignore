@@ -1,0 +1,5 @@
+# exclude python virtualenv
+.env
+
+# exclude *~ files
+*~
