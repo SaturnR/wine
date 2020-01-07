@@ -1,9 +1,27 @@
 #!/usr/bin/env python3
+import re
 import csv
 import requests as req
 from bs4 import BeautifulSoup
 
-URL = "http://georgianwine.gov.ge/Ge/WineCompaniesAndWineries?page=1&pageSize=2000"
+URL = "http://georgianwine.gov.ge/Ge/WineCompaniesAndWineries?page=1&pageSize=20"
+
+class Patern:
+    EMAIL = '[\w.-]+@[\w.-]+'
+    PHONE = '\+*[\d\s-]{4,20}'
+    INFO = "[^<h2>]([\w.\s–\-\"',!=])+"
+
+def isEmail(data):
+    if re.fullmatch(Patern.EMAIL, data):
+        return True
+    else:
+        return False
+   
+def isPhoneNumber(data):
+    if re.fullmatch(Patern.PHONE, data):
+        return True
+    else:
+        return False
 
 def display(email_divs, limit=None):
     scrap = []
@@ -23,11 +41,9 @@ def display(email_divs, limit=None):
             elif isPhoneNumber(text):
                 phone = text
         h2 = info.find('h2')
-        if h2:
-            span = str(h2.find('span'))
-            if span:
-                inform = str(h2).replace(span,'').strip('<h2>').strip('</h2>')\
-                                                               .replace('\t','').replace('\xa0','').strip()
+        match = re.search(Patern.INFO, str(h2))
+        if match:
+            inform = match.group()
         h3 = info.find('h3')
         if h3:
             address = h3.text.strip()
@@ -40,21 +56,6 @@ def display(email_divs, limit=None):
         print('\n========================\n')
     return scrap
 
-def isEmail(data):
-    if '@' in data[1:-2]:
-        return True
-    else:
-        return False
-   
-def isPhoneNumber(data):
-    for n in data:
-        if ord(n) in range(48, 58):
-            pass
-        else:
-            return False
-    return True
-
-
 def toCSV(data):
     with open('wine_companies.csv', mode='w') as wine_file:
         writer = csv.writer(wine_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
@@ -62,10 +63,8 @@ def toCSV(data):
         for comp in data:
             writer.writerow([comp['ID'], comp['name'], comp["email"],
                              comp["phone"], comp["address"]])
-
-
-
-
+email_divs = None
+company_data = None
 if __name__ == "__main__":
     page = req.get(URL)
     html = BeautifulSoup(page.text)
